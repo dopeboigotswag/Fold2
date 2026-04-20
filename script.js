@@ -44,6 +44,10 @@ const audioPickup = new Audio('pickup_sound.wav');
 const audioExit = new Audio('exit_sound.mp3');
 const audioDeath = new Audio('death_sound.mp3');
 
+// New Footsteps Audio
+const audioFootsteps = new Audio('footsteps.wav');
+audioFootsteps.loop = true; // Loops seamlessly while walking
+
 const levelTracks = [audioLevel1, audioLevel2, audioLevel3];
 let currentTrack = null;
 
@@ -52,7 +56,8 @@ function applyVolumeToAll() {
     if (track) track.volume = globalVolume;
   });
   
-  [audioFold, audioJump, audioPickup, audioExit, audioDeath].forEach(sfx => {
+  // Added audioFootsteps to the volume array
+  [audioFold, audioJump, audioPickup, audioExit, audioDeath, audioFootsteps].forEach(sfx => {
     if (sfx) sfx.volume = Math.min(1.0, globalVolume * sfxMultiplier);
   });
 }
@@ -302,7 +307,12 @@ function resolveCollisions(plats) {
 
 // ── Update ────────────────────────────────────────────────
 function update() {
-  if (state!=='playing') return;
+  // Prevent footsteps from playing if the game isn't actively running
+  if (state !== 'playing') {
+    if (!audioFootsteps.paused) audioFootsteps.pause();
+    return;
+  }
+  
   const lv = LEVELS[levelIdx];
   if (timerOn) timer += 1/60;
 
@@ -337,6 +347,18 @@ function update() {
 
   const isMoving = Math.abs(player.vx) > 0.01;
   
+  // -- Footstep Audio Logic --
+  if (isMoving && player.onGround) {
+    if (audioFootsteps.paused) {
+      audioFootsteps.play().catch(()=>{});
+    }
+  } else {
+    if (!audioFootsteps.paused) {
+      audioFootsteps.pause();
+    }
+  }
+
+  // Animation Logic
   if (!player.onGround) {
     frameIdx = 1; 
     frameTimer = 0;
@@ -401,7 +423,6 @@ function drawCrane(cx,cy,sz,col) {
 
 function drawPlatform(p) {
   const s=sc(), x=p.x*s, y=p.y*s, w=p.w*s, h=p.h*s;
-  // NEW COLOR PALETTE: Dark Slate for normal, Cyan for folded, Purple for fold-proof
   ctx.fillStyle = p.mirrored ? '#0277bd' : (p.fp ? '#4527a0' : '#263238');
   ctx.fillRect(x,y,w,h);
   
@@ -467,11 +488,9 @@ function drawPlayer() {
 }
 
 function drawBG() {
-  // NEW BACKGROUND: Crisp cool off-white
   ctx.fillStyle='#f0f4f8'; 
   ctx.fillRect(0,0,canvas.width,canvas.height);
   
-  // NEW GRID: Light blue-grey
   ctx.strokeStyle='rgba(144,164,174,0.25)'; 
   ctx.lineWidth=0.5;
   const s=sc();
@@ -483,11 +502,9 @@ function drawHUD() {
   const s=sc(), lv=LEVELS[levelIdx];
   ctx.save(); ctx.scale(s,s);
   
-  // NEW HUD: Dark Slate
   ctx.fillStyle='rgba(38,50,56,0.9)'; 
   ctx.fillRect(0,0,W,34);
   
-  // HUD Text: Bright Off-White
   ctx.fillStyle='#eceff1'; 
   ctx.font='bold 13px MyCustomFont';
   ctx.fillText(`Folds: ${foldCount}`,14,22);
@@ -522,7 +539,6 @@ function drawMenu() {
   drawBG();
   ctx.save(); ctx.scale(s,s);
   
-  // NEW MENU POPUP COLORS
   rrect(185,80,430,330,8,'rgba(38,50,56,0.95)','#4fc3f7');
   
   ctx.fillStyle='#90a4ae'; ctx.font='bold 13px MyCustomFont'; ctx.textAlign='center';
@@ -624,12 +640,9 @@ function drawGame() {
 
   if (foldMode) {
     ctx.save(); ctx.scale(s,s);
-    
-    // NEW FOLD PREVIEW TINT
     ctx.fillStyle='rgba(3,169,244,0.1)'; 
     ctx.fillRect(axPrev,0,W-axPrev,H);
     ctx.globalAlpha=0.28;
-    
     for (const p of lv.platforms) {
       if (p.fp) continue;
       if (p.x+p.w>axPrev) {
@@ -638,14 +651,10 @@ function drawGame() {
       }
     }
     ctx.globalAlpha=1;
-    
-    // NEW FOLD LINE: CYAN
     ctx.strokeStyle='#0288d1'; ctx.lineWidth=2/s;
     ctx.setLineDash([8/s,4/s]);
     ctx.beginPath(); ctx.moveTo(axPrev,0); ctx.lineTo(axPrev,H); ctx.stroke();
     ctx.setLineDash([]);
-    
-    // TEXT COLOR CHANGED to darker cyan
     ctx.fillStyle='#01579b'; ctx.font=`bold ${36/s}px MyCustomFont`; ctx.textAlign='center';
     ctx.fillText('Release F to fold here',axPrev,180/s);
     ctx.textAlign='left'; ctx.restore();
@@ -653,12 +662,8 @@ function drawGame() {
 
   if (folded) {
     ctx.save(); ctx.scale(s,s);
-    
-    // FOLDED AREA OVERLAY
     ctx.fillStyle='rgba(144,164,174,0.2)'; 
     ctx.fillRect(foldAxis,0,W-foldAxis,H);
-    
-    // SOLID FOLD CREASE LINE
     ctx.strokeStyle='#0277bd'; ctx.lineWidth=3/s;
     ctx.beginPath(); ctx.moveTo(foldAxis,0); ctx.lineTo(foldAxis,H); ctx.stroke();
     ctx.restore();
