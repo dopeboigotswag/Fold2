@@ -39,7 +39,7 @@ const audioLevel3 = new Audio('level3_music.mp3');
 audioLevel3.loop = true;
 
 const audioFold = new Audio('fold_sound.mp3');
-const audioJump = new Audio('jump_sound.wav');
+const audioJump = new Audio('jump_sound.mp3');
 const audioPickup = new Audio('pickup_sound.wav');
 const audioExit = new Audio('exit_sound.mp3');
 const audioDeath = new Audio('death_sound.mp3');
@@ -225,11 +225,11 @@ const LEVELS = [
       {x:500,y:265,w:80,h:25},
     ],
     cranes:[
-      {x:695,y:338,ok:false}, // Old exit location
-      {x:250,y:330,ok:false}, // New pickup on the 2nd platform
-      {x:750,y:390,ok:false}  // New pickup on the bottom right platform
+      {x:695,y:338,ok:false}, 
+      {x:250,y:330,ok:false}, 
+      {x:750,y:390,ok:false}  
     ],
-    exit:{x:450,y:270}, // Old pickup location
+    exit:{x:450,y:270}, 
   },
 ];
 
@@ -358,7 +358,6 @@ function update() {
     state='dead'; 
     return; 
   }
-  // Uses effectiveHazards now to prevent invisible spike hits across folds
   for (const h of effectiveHazards()) {
     if (overlap(player.x, player.y, player.w, player.h, h.x, h.y, h.w, h.h)) { 
       playSound(audioDeath);
@@ -402,15 +401,18 @@ function drawCrane(cx,cy,sz,col) {
 
 function drawPlatform(p) {
   const s=sc(), x=p.x*s, y=p.y*s, w=p.w*s, h=p.h*s;
-  ctx.fillStyle = p.mirrored?'#c8a060':(p.fp?'#334466':'#7a5c10');
+  // NEW COLOR PALETTE: Dark Slate for normal, Cyan for folded, Purple for fold-proof
+  ctx.fillStyle = p.mirrored ? '#0277bd' : (p.fp ? '#4527a0' : '#263238');
   ctx.fillRect(x,y,w,h);
-  ctx.fillStyle = p.mirrored?'#e0c070':(p.fp?'#6688bb':'#9a7220');
+  
+  ctx.fillStyle = p.mirrored ? '#4fc3f7' : (p.fp ? '#7e57c2' : '#546e7a');
   ctx.fillRect(x,y,w,3*s);
+  
   if (!p.fp) {
-    ctx.strokeStyle='rgba(0,0,0,0.12)'; ctx.lineWidth=1;
+    ctx.strokeStyle='rgba(0,0,0,0.15)'; ctx.lineWidth=1;
     for (let xi=x+20*s;xi<x+w;xi+=20*s) { ctx.beginPath(); ctx.moveTo(xi,y); ctx.lineTo(xi,y+h); ctx.stroke(); }
   } else {
-    ctx.strokeStyle='#5588ee'; ctx.lineWidth=1.5*s; ctx.strokeRect(x,y,w,h);
+    ctx.strokeStyle='#b388ff'; ctx.lineWidth=1.5*s; ctx.strokeRect(x,y,w,h);
   }
 }
 
@@ -418,7 +420,6 @@ function drawSpike(hx, hy, hw, hh) {
   const s = sc();
   ctx.save();
   
-  // Create a clipping mask so the triangles don't bleed past their width
   ctx.beginPath();
   ctx.rect(hx * s, (hy - 15) * s, hw * s, (hh + 15) * s);
   ctx.clip();
@@ -466,8 +467,13 @@ function drawPlayer() {
 }
 
 function drawBG() {
-  ctx.fillStyle='#f5e6c8'; ctx.fillRect(0,0,canvas.width,canvas.height);
-  ctx.strokeStyle='rgba(180,150,100,0.22)'; ctx.lineWidth=0.5;
+  // NEW BACKGROUND: Crisp cool off-white
+  ctx.fillStyle='#f0f4f8'; 
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+  
+  // NEW GRID: Light blue-grey
+  ctx.strokeStyle='rgba(144,164,174,0.25)'; 
+  ctx.lineWidth=0.5;
   const s=sc();
   for (let x=0;x<W;x+=20) { ctx.beginPath(); ctx.moveTo(x*s,0); ctx.lineTo(x*s,H*s); ctx.stroke(); }
   for (let y=0;y<H;y+=20) { ctx.beginPath(); ctx.moveTo(0,y*s); ctx.lineTo(W*s,y*s); ctx.stroke(); }
@@ -476,18 +482,26 @@ function drawBG() {
 function drawHUD() {
   const s=sc(), lv=LEVELS[levelIdx];
   ctx.save(); ctx.scale(s,s);
-  ctx.fillStyle='rgba(12,7,1,0.80)'; ctx.fillRect(0,0,W,34);
-  ctx.fillStyle='#f5e6c8'; ctx.font='bold 13px MyCustomFont';
+  
+  // NEW HUD: Dark Slate
+  ctx.fillStyle='rgba(38,50,56,0.9)'; 
+  ctx.fillRect(0,0,W,34);
+  
+  // HUD Text: Bright Off-White
+  ctx.fillStyle='#eceff1'; 
+  ctx.font='bold 13px MyCustomFont';
   ctx.fillText(`Folds: ${foldCount}`,14,22);
   const mm=String(Math.floor(timer/60)).padStart(2,'0'), ss2=String(Math.floor(timer%60)).padStart(2,'0');
   ctx.textAlign='right'; ctx.fillText(`${mm}:${ss2}`,W-14,22); ctx.textAlign='left';
   const got=lv.cranes.filter(c=>c.ok).length;
+  
   ctx.fillStyle='#d4a020'; ctx.textAlign='center';
   ctx.fillText(`✦ ${got}/${lv.cranes.length}   ${lv.name}`,W/2,22);
   ctx.textAlign='left';
+  
   if (folded) {
-    ctx.fillStyle='rgba(12,7,1,0.65)'; ctx.fillRect(W-118,38,114,24);
-    ctx.fillStyle='#ffaa44'; ctx.font='11px MyCustomFont'; ctx.fillText('Press R to Unfold',W-108,54);
+    ctx.fillStyle='rgba(38,50,56,0.8)'; ctx.fillRect(W-118,38,114,24);
+    ctx.fillStyle='#4fc3f7'; ctx.font='11px MyCustomFont'; ctx.fillText('Press R to Unfold',W-108,54);
   }
   ctx.restore();
 }
@@ -507,16 +521,19 @@ function drawMenu() {
   const s=sc();
   drawBG();
   ctx.save(); ctx.scale(s,s);
-  rrect(185,80,430,330,8,'rgba(15,8,2,0.84)','#c4a35a');
-  ctx.fillStyle='#7a6040'; ctx.font='bold 13px MyCustomFont'; ctx.textAlign='center';
+  
+  // NEW MENU POPUP COLORS
+  rrect(185,80,430,330,8,'rgba(38,50,56,0.95)','#4fc3f7');
+  
+  ctx.fillStyle='#90a4ae'; ctx.font='bold 13px MyCustomFont'; ctx.textAlign='center';
   ctx.fillText('START MENU',W/2,118);
-  ctx.fillStyle='#c4a35a'; ctx.font='bold 56px MyCustomFont';
+  ctx.fillStyle='#4fc3f7'; ctx.font='bold 56px MyCustomFont';
   ctx.fillText('FOLD',W/2,178);
-  ctx.fillStyle='#a09070'; ctx.font='13px MyCustomFont';
+  ctx.fillStyle='#eceff1'; ctx.font='13px MyCustomFont';
   ctx.fillText('Fold the world. Repair the Folio.',W/2,218);
-  ctx.fillStyle='#7a6040'; ctx.font='12px MyCustomFont';
+  ctx.fillStyle='#b0bec5'; ctx.font='12px MyCustomFont';
   ['A / D  —  Move','Space  —  Jump','Hold F + Mouse  —  Fold preview','Release F  —  Execute fold','R  —  Unfold','Esc  —  Pause Menu'].forEach((l,i)=>ctx.fillText(l,W/2,248+i*20));
-  ctx.fillStyle='#00cc66'; ctx.font='bold 15px MyCustomFont';
+  ctx.fillStyle='#00e676'; ctx.font='bold 15px MyCustomFont';
   ctx.fillText('Press  ENTER  to begin',W/2,372);
   ctx.textAlign='left'; ctx.restore();
 }
@@ -525,17 +542,17 @@ function drawPause() {
   drawGame();
   const s=sc();
   ctx.save(); ctx.scale(s,s);
-  ctx.fillStyle='rgba(8,4,1,0.58)';
+  ctx.fillStyle='rgba(15,23,42,0.58)';
   ctx.fillRect(0,0,W,H);
   
-  rrect(210,110,380,260,8,'rgba(15,8,2,0.90)','#c4a35a');
+  rrect(210,110,380,260,8,'rgba(38,50,56,0.95)','#4fc3f7');
   
-  ctx.fillStyle='#7a6040'; ctx.font='bold 13px MyCustomFont'; ctx.textAlign='center';
+  ctx.fillStyle='#90a4ae'; ctx.font='bold 13px MyCustomFont'; ctx.textAlign='center';
   ctx.fillText('PAUSE MENU',W/2,146);
-  ctx.fillStyle='#c4a35a'; ctx.font='bold 42px MyCustomFont';
+  ctx.fillStyle='#4fc3f7'; ctx.font='bold 42px MyCustomFont';
   ctx.fillText('Paused',W/2,200);
   
-  ctx.fillStyle='#f5e6c8'; ctx.font='13px MyCustomFont';
+  ctx.fillStyle='#eceff1'; ctx.font='13px MyCustomFont';
   ctx.fillText('Press ESC to resume',W/2,248);
   ctx.fillText('Press ENTER to restart this level',W/2,276);
   ctx.fillText('Press M to return to start menu',W/2,304);
@@ -551,12 +568,12 @@ function drawDead() {
   drawGame();
   const s=sc();
   ctx.save(); ctx.scale(s,s);
-  ctx.fillStyle='rgba(8,4,1,0.58)';
+  ctx.fillStyle='rgba(15,23,42,0.58)';
   ctx.fillRect(0,0,W,H);
-  rrect(210,160,380,180,8,'rgba(15,8,2,0.90)','#9a2020');
-  ctx.fillStyle='#e06020'; ctx.font='bold 42px MyCustomFont'; ctx.textAlign='center';
+  rrect(210,160,380,180,8,'rgba(38,50,56,0.95)','#e53935');
+  ctx.fillStyle='#ef5350'; ctx.font='bold 42px MyCustomFont'; ctx.textAlign='center';
   ctx.fillText('You Died!',W/2,230);
-  ctx.fillStyle='#f5e6c8'; ctx.font='14px MyCustomFont';
+  ctx.fillStyle='#eceff1'; ctx.font='14px MyCustomFont';
   ctx.fillText('Press ENTER to restart this level',W/2,280);
   ctx.textAlign='left';
   ctx.restore();
@@ -566,27 +583,27 @@ function drawLevelComplete() {
   drawGame();
   const s = sc();
   ctx.save(); ctx.scale(s, s);
-  ctx.fillStyle = 'rgba(8,4,1,0.58)';
+  ctx.fillStyle = 'rgba(15,23,42,0.58)';
   ctx.fillRect(0, 0, W, H);
   
-  rrect(210, 100, 380, 290, 8, 'rgba(15,8,2,0.90)', '#00cc66');
+  rrect(210, 100, 380, 290, 8, 'rgba(38,50,56,0.95)', '#00e676');
   
   const isLastLevel = levelIdx === LEVELS.length - 1;
   const lv = LEVELS[levelIdx];
   const got = lv.cranes.filter(c => c.ok).length;
   const total = lv.cranes.length;
   
-  ctx.fillStyle = '#00cc66'; ctx.font = 'bold 36px MyCustomFont'; ctx.textAlign = 'center';
+  ctx.fillStyle = '#00e676'; ctx.font = 'bold 36px MyCustomFont'; ctx.textAlign = 'center';
   ctx.fillText(isLastLevel ? 'Game Complete!' : 'Level Complete!', W/2, 150);
   
-  ctx.fillStyle = '#f5e6c8'; ctx.font = '18px MyCustomFont';
+  ctx.fillStyle = '#eceff1'; ctx.font = '18px MyCustomFont';
   const mm = String(Math.floor(timer/60)).padStart(2,'0');
   const ss2 = String(Math.floor(timer%60)).padStart(2,'0');
   ctx.fillText(`Time: ${mm}:${ss2}`, W/2, 195);
   ctx.fillText(`Folds Used: ${foldCount}`, W/2, 225);
   ctx.fillText(`Cranes Collected: ${got} / ${total}`, W/2, 255);
   
-  ctx.fillStyle = '#c4a35a'; ctx.font = '14px MyCustomFont';
+  ctx.fillStyle = '#4fc3f7'; ctx.font = '14px MyCustomFont';
   if (!isLastLevel) {
     ctx.fillText('Press ENTER for Next Level', W/2, 310);
   } else {
@@ -607,36 +624,48 @@ function drawGame() {
 
   if (foldMode) {
     ctx.save(); ctx.scale(s,s);
-    ctx.fillStyle='rgba(80,60,20,0.2)'; ctx.fillRect(axPrev,0,W-axPrev,H);
+    
+    // NEW FOLD PREVIEW TINT
+    ctx.fillStyle='rgba(3,169,244,0.1)'; 
+    ctx.fillRect(axPrev,0,W-axPrev,H);
     ctx.globalAlpha=0.28;
+    
     for (const p of lv.platforms) {
       if (p.fp) continue;
       if (p.x+p.w>axPrev) {
         const lx=Math.max(p.x,axPrev),rx=p.x+p.w,sw=rx-lx,mx=2*axPrev-rx;
-        ctx.fillStyle='#c8a060'; ctx.fillRect(mx,p.y,sw,p.h);
+        ctx.fillStyle='#4fc3f7'; ctx.fillRect(mx,p.y,sw,p.h);
       }
     }
     ctx.globalAlpha=1;
-    ctx.strokeStyle='#e06020'; ctx.lineWidth=2/s;
+    
+    // NEW FOLD LINE: CYAN
+    ctx.strokeStyle='#0288d1'; ctx.lineWidth=2/s;
     ctx.setLineDash([8/s,4/s]);
     ctx.beginPath(); ctx.moveTo(axPrev,0); ctx.lineTo(axPrev,H); ctx.stroke();
     ctx.setLineDash([]);
-    ctx.fillStyle='#8b2500'; ctx.font=`bold ${36/s}px MyCustomFont`; ctx.textAlign='center';
+    
+    // TEXT COLOR CHANGED to darker cyan
+    ctx.fillStyle='#01579b'; ctx.font=`bold ${36/s}px MyCustomFont`; ctx.textAlign='center';
     ctx.fillText('Release F to fold here',axPrev,180/s);
     ctx.textAlign='left'; ctx.restore();
   }
 
   if (folded) {
     ctx.save(); ctx.scale(s,s);
-    ctx.fillStyle='rgba(90,60,20,0.42)'; ctx.fillRect(foldAxis,0,W-foldAxis,H);
-    ctx.strokeStyle='#7a3a0a'; ctx.lineWidth=3/s;
+    
+    // FOLDED AREA OVERLAY
+    ctx.fillStyle='rgba(144,164,174,0.2)'; 
+    ctx.fillRect(foldAxis,0,W-foldAxis,H);
+    
+    // SOLID FOLD CREASE LINE
+    ctx.strokeStyle='#0277bd'; ctx.lineWidth=3/s;
     ctx.beginPath(); ctx.moveTo(foldAxis,0); ctx.lineTo(foldAxis,H); ctx.stroke();
     ctx.restore();
   }
 
   for (const p of effectivePlatforms()) drawPlatform(p);
   
-  // Render Hazards using effectiveHazards() to safely clip rendering at fold line
   for (const h of effectiveHazards()) {
     drawSpike(h.x, h.y, h.w, h.h);
   }
@@ -672,8 +701,8 @@ function drawGame() {
 
   if (timer<7) {
     ctx.save(); ctx.scale(s,s);
-    ctx.fillStyle='rgba(10,6,2,0.68)'; ctx.fillRect(0,H-50,W,50);
-    ctx.fillStyle='#e0cfaa'; ctx.font='22px MyCustomFont'; ctx.textAlign='center';
+    ctx.fillStyle='rgba(38,50,56,0.85)'; ctx.fillRect(0,H-50,W,50);
+    ctx.fillStyle='#eceff1'; ctx.font='22px MyCustomFont'; ctx.textAlign='center';
     ctx.fillText(lv.hint,W/2,H-18);
     ctx.textAlign='left'; ctx.restore();
   }
@@ -736,13 +765,25 @@ document.addEventListener('keydown', e => {
   }
 });
 
-function loop() {
-  update();
-  if      (state==='menu')          drawMenu();
-  else if (state==='paused')        drawPause();
-  else if (state==='dead')          drawDead();
-  else if (state==='levelComplete') drawLevelComplete();
-  else                              drawGame();
+let lastTime = 0;
+const FPS = 60;
+const frameInterval = 1000 / FPS;
+
+function loop(timestamp) {
   requestAnimationFrame(loop);
+  
+  if (!timestamp) timestamp = 0;
+  const deltaTime = timestamp - lastTime;
+  
+  if (deltaTime >= frameInterval) {
+    lastTime = timestamp - (deltaTime % frameInterval);
+    
+    update();
+    if      (state==='menu')          drawMenu();
+    else if (state==='paused')        drawPause();
+    else if (state==='dead')          drawDead();
+    else if (state==='levelComplete') drawLevelComplete();
+    else                              drawGame();
+  }
 }
-loop();
+requestAnimationFrame(loop);
